@@ -8,24 +8,39 @@ class Data:
 
     def format_date(self, date):
         date1 = datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
-        return date1.strftime("%d %B")
+        return date1.strftime("%d %B %Y")
+
+    def get_config(self):
+        f = open("config.json", "r")
+        config = json.loads(f.read())
+        f.close()
+        return config
 
     def get_data(self, country):
+        existent_data = False
         try:
-            """
+            f = open("data/" + country + ".json", "r")
+            data = json.loads(f.read())
+            f.close()
+            existent_data = True
+        except:
+            print("No existent data. Getting from server.")
+            existent_data = False
+        
+        try:
             # request server
             r = requests.get('https://api.covid19api.com/country/' + country)
             # write to file
             f = open("data/" + country + ".json", "w")
-            f.write(r)
+            f.write(r.text)
             f.close()
             data = r.json()
-            """
-            f = open("data/" + country + ".json", "r")
-            data = json.loads(f.read())
             return data
         except:
             print("Error getting data.")
+            if existent_data:
+                print("Will use existent data")
+                return data
             return "error"
 
     def get_confirmed(self, data):
@@ -82,34 +97,41 @@ class Data:
         
         return recovered
 
-    def estimate_days_to_max(self, data, period_length, n_periods):
-        print("Estimating from the last " + str(int(period_length * n_periods)) + " days...")
-        periods = np.array_split(data['variations'], int(len(data['variations']) / period_length))
-        periods1 = []
-        periods_variation = []
+    def estimate_days_to_max(self, data, n_days):
+        n_days = int(n_days)
+        print("Estimating from the last " + str(n_days) + " days...")
         average_variation = 0
-        for p in periods:
-            periods1.append(np.mean(p))
-        i = len(periods1) - n_periods - 1
-        while i < len(periods1) - 1:
-            periods_variation.append(periods1[i] - periods1[i+1])
+        days_variation = []
+        calculated_values = []
+        i = len(data['variations']) - n_days - 1
+        # fill array with existent data until estimated values
+        for x in range(i):
+            calculated_values.append(data['values'][x])
+        # save daily variation to array
+        while i < len(data['variations']) - 1:
+            days_variation.append(data['variations'][i] - data['variations'][i+1])
             i += 1
-        average_variation = np.mean(periods_variation)
-        print(average_variation)
+        # calculate average variation
+        average_variation = np.mean(days_variation)
+        # if the variation is positive (each day there are less occurences)
         if average_variation > 0:
-            days = (data['values'][len(data['values']) - 1] / average_variation) * period_length
-            print("Accuracy on existent data: " + str(self.calculate_accuracy(data['variations'], average_variation, (period_length * n_periods))) + "%")
-            return days
+            days = 0
+            current_value = data['values'][len(data['values']) - n_days - 1] # current number of occurences
+            current_variation = data['variations'][len(data['variations'])  - n_days - 1] # current variation
+            target = self.get_config()['estimate_until']
+            if target != "zero":
+                target = "max"
+            if target == "zero":
+                while current_value > 0:
+                    calculated_values.append(current_value)
+                    current_value += current_variation
+                    current_variation -= average_variation
+                    days += 1 # one more day is needed to the occurences reach 0
+            else:
+                while current_variation > 0:
+                    calculated_values.append(current_value)
+                    current_value += current_variation
+                    current_variation -= average_variation
+                    days += 1 # one more day is needed to the occurences reach 0
+            return [days, calculated_values]
         return "error"
-    
-    def calculate_accuracy(self, data, average_variation, n_days):
-        accuracies = []
-        i = len(data) - n_days - 1
-        # i = 0
-        estimated_value = data[i]
-        while i < len(data):
-            if data[i] > 0:
-                accuracies.append(estimated_value / data[i])
-                estimated_value -= average_variation
-            i += 1
-        return abs(np.mean(accuracies) * 100)

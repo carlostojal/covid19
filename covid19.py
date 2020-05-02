@@ -28,14 +28,14 @@ dataManager = Data()
 
 data = dataManager.get_data(country)
 
+success = False
+
 if data != "error":
     success = True
 
 if success:
 
     success = False
-
-    print(dataManager.get_confirmed(data))
 
     if study == "confirmed":
         data = dataManager.get_confirmed(data)
@@ -62,14 +62,22 @@ if success:
         plt.suptitle("COVID19 " + country.upper())
         plt.show()
 
-        days_to_max = dataManager.estimate_days_to_max(data, 5, 3)
+        days_to_target = dataManager.estimate_days_to_max(data, dataManager.get_config()['estimate_from'])
+        int_days_to_target = days_to_target[0]
+        estimated_values = days_to_target[1]
 
-        if days_to_max == "error":
+        if days_to_target == "error":
             print("Couldn't determine based on the given data.")
         else:
-            print("Estimated days to maximum: " + str(days_to_max))
+            print("Estimated days to " + dataManager.get_config()['estimate_until'] + ": " + str(int_days_to_target))
 
-            date = datetime.datetime.strptime(data['dates'][len(data) - 1], "%d %B") + datetime.timedelta(days=days_to_max)
-            date = date.strftime("%d %B")
+            date = datetime.datetime.strptime(data['dates'][len(data['dates']) - 1], "%d %B %Y") + datetime.timedelta(days=int_days_to_target)
+            date = date.strftime("%d %B %Y")
             
             print("(" + date + ")")
+
+            plt.plot(estimated_values)
+            plt.plot(data['dates'], data['values'])
+            plt.xticks(data['dates'], data['dates'], rotation='vertical')
+            plt.suptitle("Estimated " + dataManager.get_config()['estimate_until'] + " in " + country.upper())
+            plt.show()
