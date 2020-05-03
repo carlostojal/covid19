@@ -103,11 +103,11 @@ class Data:
         average_variation = 0
         days_variation = []
         calculated_values = []
-        i = len(data['variations']) - n_days - 1
         # fill array with existent data until estimated values
-        for x in range(i):
+        for x in range(len(data['variations']) - 1):
             calculated_values.append(data['values'][x])
         # save daily variation to array
+        i = len(data['variations']) - n_days - 1
         while i < len(data['variations']) - 1:
             days_variation.append(data['variations'][i] - data['variations'][i+1])
             i += 1
@@ -116,7 +116,7 @@ class Data:
         # if the variation is positive (each day there are less occurences)
         if average_variation > 0:
             days = 0
-            current_value = data['values'][len(data['values']) - n_days - 1] # current number of occurences
+            current_value = data['values'][len(data['values']) - 1] # current number of occurences
             current_variation = data['variations'][len(data['variations'])  - n_days - 1] # current variation
             target = self.get_config()['estimate_until']
             if target != "zero":
@@ -133,6 +133,5 @@ class Data:
                     current_value += current_variation
                     current_variation -= average_variation
                     days += 1 # one more day is needed to the occurences reach 0
-                days -= n_days
             return [days, calculated_values]
         return "error"
