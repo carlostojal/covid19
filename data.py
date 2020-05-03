@@ -133,5 +133,6 @@ class Data:
                     current_value += current_variation
                     current_variation -= average_variation
                     days += 1 # one more day is needed to the occurences reach 0
+                days -= n_days
             return [days, calculated_values]
         return "error"
