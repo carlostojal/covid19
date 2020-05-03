@@ -1,7 +1,7 @@
 # covid19
 
 COVID19 data analysis.
-**WARNING:** Estimatives not reliable.
+**WARNING:** Estimates not reliable.
 
 ## Configuration
 
